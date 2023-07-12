@@ -1,22 +1,53 @@
-import os
-import numpy as np
+def process_dataset(dataset_dir):
+    psnr_sum = 0
+    ssim_sum = 0
+    scene_count = 0
 
-def get_timestamps_map(dir_path, timestamps_file):
-    with open(os.path.join(dir_path, timestamps_file), 'r') as f:
-        timestamps = f.readlines()
-    timestamps = [float(t.strip()) for t in timestamps]
-    files = sorted(os.listdir(dir_path))
-    images = [f for f in files if f.endswith('.npy') or f.endswith('.png')]
-    return dict(zip(timestamps, [os.path.join(dir_path, img) for img in images]))
+    # Iterate over all scene folders in the dataset folder
+    for scene in os.listdir(dataset_dir):
+        scene_dir = os.path.join(dataset_dir, scene)
 
-def match_images(a_dir, b_dir):
-    a_map = get_timestamps_map(a_dir, 'timestamps.txt')
-    b_map = get_timestamps_map(b_dir, 'timestamps.txt')
-    
-    for a_t, a_img in a_map.items():
-        b_t = min(b_map.keys(), key=lambda t: abs(t - a_t))
-        if abs(a_t - b_t) <= 0.1 / 1000:  # 0.1 ms = 0.1 / 1000 s
-            process(a_img, b_map[b_t])
+        # Ensure we're looking at a directory
+        if os.path.isdir(scene_dir):
+            scene_count += 1
+            gt_dir = os.path.join(scene_dir, 'gt')
+            recon_dir = os.path.join(scene_dir, 'reconstruction')
 
-def process(img1, img2):
-    pass  # 用你的处理函数替换
+            # Match images and compute metrics
+            psnr, ssim = match_images(gt_dir, recon_dir)
+
+            # Sum metrics for averaging later
+            psnr_sum += psnr
+            ssim_sum += ssim
+
+            # Write metrics to file in the scene folder
+            with open(os.path.join(scene_dir, 'metrics.txt'), 'w') as f:
+                f.write(f'PSNR: {psnr}\nSSIM: {ssim}')
+
+    # Write average metrics to file in the dataset folder
+    with open(os.path.join(dataset_dir, 'metrics.txt'), 'w') as f:
+        f.write(f'Average PSNR: {psnr_sum / scene_count}\nAverage SSIM: {ssim_sum / scene_count}')
+
+
+def match_images(gt_dir, recon_dir):
+    # Assuming `get_timestamps_map` and `process` are already defined as in the previous post
+    gt_map = get_timestamps_map(gt_dir, 'timestamps.txt')
+    recon_map = get_timestamps_map(recon_dir, 'timestamps.txt')
+
+    psnr_sum = 0
+    ssim_sum = 0
+    img_count = 0
+
+    for gt_t, gt_img in gt_map.items():
+        recon_t = min(recon_map.keys(), key=lambda t: abs(t - gt_t))
+        if abs(gt_t - recon_t) <= 0.1 / 1000:  # 0.1 ms = 0.1 / 1000 s
+            img1 = np.load(gt_img)
+            img2 = cv2.imread(recon_map[recon_t])
+            psnr = compute_psnr(img1, img2)
+            ssim = compute_ssim(img1, img2)
+
+            psnr_sum += psnr
+            ssim_sum += ssim
+            img_count += 1
+
+    return psnr_sum / img_count, ssim_sum / img_count
