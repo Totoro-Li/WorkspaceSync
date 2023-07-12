@@ -1,0 +1,6 @@
+ # 可视化边界框
+    fig, ax = plt.subplots()
+    ax.imshow(recon_img, cmap='gray')
+    rect = Rectangle((minc, minr), maxc - minc, maxr - minr, fill=False, edgecolor='red', linewidth=2)
+    ax.add_patch(rect)
+    plt.show()
