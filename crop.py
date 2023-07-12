@@ -1,69 +1,53 @@
-import cv2
 import numpy as np
+import cv2
+import matplotlib.pyplot as plt
+from skimage.measure import label, regionprops
 
-def generate_heatmap(event_data):
-    """
-    Generate heatmap from event data.
+# 读取事件文件
+with open('events.txt', 'r') as f:
+    lines = f.readlines()
 
-    This function assumes that the event data is a 2D matrix, where the value of each cell represents 
-    the frequency of events at the corresponding location.
+# 读取图像大小
+width, height = map(int, lines[0].split())
 
-    Parameters:
-        event_data: 2D numpy array with event frequencies.
+# 初始化热力图
+heatmap = np.zeros((height, width))
 
-    Returns:
-        2D numpy array representing the heatmap.
-    """
+# 生成热力图
+for line in lines[1:]:
+    t, x, y, p = line.split()
+    x, y = int(x), int(y)
+    heatmap[y, x] += 1
 
-    # Normalize the event data to the range [0, 255] for image processing
-    heatmap = ((event_data - np.min(event_data)) / (np.max(event_data) - np.min(event_data))) * 255
-    return heatmap.astype(np.uint8)
+# 显示热力图
+plt.imshow(heatmap, cmap='hot')
+plt.show()
 
+# 阈值设定为热力图中值的2倍，也可以根据实际情况调整
+threshold = 2 * np.median(heatmap)
 
-def find_blur_regions(heatmap, threshold_ratio=0.5):
-    """
-    Find blur regions in heatmap.
+# 使用阈值分割热力图，生成二值图像
+binary_img = (heatmap > threshold).astype(np.uint8)
 
-    This function uses a threshold to separate high-frequency areas (potential blur regions) 
-    and low-frequency areas. The threshold is calculated as the mean value of the heatmap 
-    multiplied by threshold_ratio.
+# 查找连通区域
+labeled_img, num = label(binary_img, connectivity=2, return_num=True)
 
-    Parameters:
-        heatmap: 2D numpy array representing the heatmap.
-        threshold_ratio: float, threshold = mean(heatmap) * threshold_ratio.
+# 读取ground truth和重构图片
+gt_img = np.load('a.npy')
+recon_img = cv2.imread('b.png', cv2.IMREAD_GRAYSCALE)
 
-    Returns:
-        List of tuples, where each tuple represents a blur region in the format (x, y, w, h).
-    """
+# 找到最大的连通区域
+max_area = 0
+max_region = None
+for region in regionprops(labeled_img):
+    if region.area > max_area:
+        max_area = region.area
+        max_region = region
 
-    # Threshold the heatmap
-    _, thresh = cv2.threshold(heatmap, np.mean(heatmap)*threshold_ratio, 255, cv2.THRESH_BINARY)
-
-    # Find contours in the thresholded heatmap
-    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    # Generate bounding boxes for the contours
-    blur_regions = [cv2.boundingRect(contour) for contour in contours]
-
-    return blur_regions
-
-
-def crop_blur_regions(image, blur_regions):
-    """
-    Crop blur regions from image.
-
-    Parameters:
-        image: 2D numpy array representing the image.
-        blur_regions: List of tuples, where each tuple represents a blur region in the format (x, y, w, h).
-
-    Returns:
-        List of 2D numpy arrays, each representing a cropped blur region.
-    """
-
-    cropped_regions = [image[y:y+h, x:x+w] for x, y, w, h in blur_regions]
-    return cropped_regions
-
-# Suppose `event_data` is your 2D event frequency data and `image` is your image
-heatmap = generate_heatmap(event_data)
-blur_regions = find_blur_regions(heatmap)
-cropped_regions = crop_blur_regions(image, blur_regions)
+# 对最大的连通区域，生成边界框并计算PSNR
+if max_region is not None:
+    minr, minc, maxr, maxc = max_region.bbox
+    gt_patch = gt_img[minr:maxr, minc:maxc]
+    recon_patch = recon_img[minr:maxr, minc:maxc]
+    psnr = 10 * np.log10(255**2 / np.mean((gt_patch - recon_patch) ** 2))
+    print(f'PSNR for region {max_region.label}: {psnr}')
