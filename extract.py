@@ -17,11 +17,12 @@ def process_resblur_gt(scenario_path, output_folder):
     # Parse start timestamps from the ground truth image file names
     gt_image_files = sorted(glob.glob(os.path.join(frame_clip_path, '*.png')))
     timestamps = np.array([int(os.path.basename(f).split('_')[0].split('-')[0][1:]) for f in gt_image_files])
+    timestamps = timestamps * 1e-9  # Convert to seconds
 
     # Extract and save ground truth images
     for image_file, timestamp in zip(gt_image_files, timestamps):
         image = cv2.imread(image_file)
-        image_path = os.path.join(gt_folder, f"image_{timestamp}.png")
+        image_path = os.path.join(gt_folder, f"image_{timestamp:.0f}.png")
         cv2.imwrite(image_path, image)
 
     # Save timestamps to a timestamps.txt in seconds, each line is a timestamp
