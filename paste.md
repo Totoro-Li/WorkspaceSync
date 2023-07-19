@@ -1,47 +1,16 @@
-To modify the original script for single image inference, we can modify the `process_dataset` function to extract blurry images from the h5 file and perform inference on each image separately. 
-
-We will create a new function `extract_blurry_images` to extract blurry images from an h5 file and return a list of tuples, each containing the blurry image and its corresponding timestamp. We can then use these timestamps to create event windows for single image reconstruction.
-
-Here's the modification:
+Here's the modification to address your comments:
 
 ```python
-def extract_blurry_images(h5_file_path):
-    """
-    Extracts blurry images and their starting timestamps from an h5 file.
+import random
 
-    Args:
-    - h5_file_path (str): The path to the h5 file containing the blurry images.
+SAMPLES_NUM = 10  # Number of images to randomly sample for reconstruction
 
-    Returns:
-    - A list of tuples, each containing a blurry image and its starting timestamp.
-    """
-    print(f"Extracting blurry images from {h5_file_path}")
-
-    blurry_images = []
-    with h5py.File(h5_file_path, 'r') as f:
-        images_group = f['images']
-        for image_name in images_group:
-            image = images_group[image_name][:]
-            timestamp = images_group[image_name].attrs['timestamp']
-            blurry_images.append((image, timestamp))
-    
-    return blurry_images
-
-def process_single_image(args, events, timestamp):
+def process_single_image(args, events, timestamp, model, reconstructor, num_frames=3):
     width, height = args.width, args.height
 
-    # Load model
-    model = load_model(args.path_to_model)
-    device = get_device(args.use_gpu)
-
-    model = model.to(device)
-    model.eval()
-    
-    reconstructor = ImageReconstructor(model, height, width, model.num_bins, args)
-
     # Get event window corresponding to the timestamp of the blurry image
-    start_time = timestamp
-    end_time = events[-1, 0] if timestamp == events[0, 0] else events[events[:, 0].searchsorted(timestamp, side='right'), 0]
+    start_time = timestamp - num_frames * args.window_duration * 1e-3  # Convert to seconds
+    end_time = timestamp + num_frames * args.window_duration * 1e-3  # Convert to seconds
     start_index = events[:, 0].searchsorted(start_time, side='left')
     end_index = events[:, 0].searchsorted(end_time, side='right')
     event_window = events[start_index:end_index]
@@ -65,7 +34,7 @@ def process_single_image(args, events, timestamp):
                                                             num_bins=model.num_bins,
                                                             width=width,
                                                             height=height,
-                                                            device=device)
+                                                            device=args.device)
 
         num_events_in_window = event_window.shape[0]
         reconstructor.update_reconstruction(event_tensor, start_index + num_events_in_window, last_timestamp)
@@ -107,9 +76,28 @@ def process_dataset_single_image(dataset_dir, path_to_model, use_gpu, output_fol
                     args_namespace = argparse.Namespace(**args)
 
                     blurry_images = extract_blurry_images(folder_path)
+
+                    with h5py.File(folder_path, 'r') as f:
+                        args_namespace.width, args_namespace.height = f.attrs['sensor_resolution'][0:2]
+
                     df = convert_h5_to_df(folder_path)
+
+                    # Load model
+                    model = load_model(args_namespace.path_to_model)
+                    device = get_device(args_namespace.use_gpu)
+
+                    model = model.to(device)
+                    model.eval()
+
+                    args_namespace.device = device
+
+                    reconstructor = ImageReconstructor(model, args_namespace.height, args_namespace.width, model.num_bins, args_namespace)
+
+                    # Randomly sample images for reconstruction
+                    blurry_images = random.sample(blurry_images, min(SAMPLES_NUM, len(blurry_images)))
+
                     for img, timestamp in blurry_images:
-                        process_single_image(args_namespace, df.values, timestamp)
+                        process_single_image(args_namespace, df.values, timestamp, model, reconstructor)
 ```
 
 Usage:
@@ -124,6 +112,11 @@ if __name__ == "__main__":
     process_dataset_single_image(dataset_dir, path_to_model, use_gpu, output_folder)
 ```
 
-In this modification, the `process_dataset_single_image` function will process each h5 file in the dataset directory, and for each h5 file, it will extract the blurry images and their starting timestamps using the `extract_blurry_images` function, then perform single image reconstruction using the `process_single_image` function for each blurry image. The `process_single_image` function will get the event window corresponding to the timestamp of the blurry image and perform reconstruction on the event window.
+This modification addresses your comments as follows:
 
-Please note that this modification assumes that the h5 file contains a group named 'images' that contains the blurry images. If your h5 file structure is different, you might need to adjust the `extract_blurry_images` function accordingly.
+1. The model is now loaded just once for each h5 file, before the loop over the blurry images, and passed as a parameter to the `process_single_image` function. The same applies to the `reconstructor` object.
+2. The `width` and `height` attributes are now read from the h5 file and set in the args namespace before calling `process_single_image`.
+3. I added a line to randomly sample a certain number of images for reconstruction. The number of images to sample is specifiedby the `SAMPLES_NUM` constant. You can adjust this value as needed. Note that if there are fewer images than `SAMPLES_NUM`, all images will be used for reconstruction.
+4. I modified the `process_single_image` function to use events from a window covering `num_frames` frames before and after the timestamp of the blurry image. The number of frames can be adjusted by changing the `num_frames` parameter of `process_single_image`. The duration of a frame is given by `args.window_duration`, which should be set to the average duration of a frame in your data.
+
+Please note that these modifications assume that the timestamps of the events and the blurry images are in the same time units (seconds). If they are not, you might need to adjust the code to convert between different time units.
