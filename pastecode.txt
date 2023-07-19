@@ -1,0 +1,41 @@
+import os
+import glob
+import re
+
+# 指定RESBlur文件夹的路径
+resblur_path = "RESBlur"
+
+# 列出你不想要的数据集名称
+blacklist = ["dataset1", "dataset2", "dataset3"]  # 用你实际不想要的数据集名替换
+
+# 初始化总的SSIM和PSNR值和计数器
+total_ssim = 0
+total_psnr = 0
+count = 0
+
+# 遍历RESBlur文件夹下的所有metrics.txt文件
+for metrics_file in glob.glob(os.path.join(resblur_path, "**", "metrics.txt"), recursive=True):
+    # 检查文件路径是否包含黑名单中的数据集名，如果包含则跳过
+    if any(dataset in metrics_file for dataset in blacklist):
+        continue
+
+    with open(metrics_file, "r") as f:
+        content = f.read()
+
+    # 从文件内容中提取SSIM和PSNR的值
+    ssim = float(re.search(r"SSIM: (\d+\.\d+)", content).group(1))
+    psnr = float(re.search(r"PSNR: (\d+\.\d+)", content).group(1))
+
+    # 累加SSIM和PSNR的值
+    total_ssim += ssim
+    total_psnr += psnr
+    count += 1
+
+# 计算平均SSIM和PSNR
+avg_ssim = total_ssim / count
+avg_psnr = total_psnr / count
+
+# 将平均SSIM和PSNR的值写入RESBlur文件夹下的metrics.txt文件
+with open(os.path.join(resblur_path, "metrics.txt"), "w") as f:
+    f.write(f"Average SSIM: {avg_ssim}\n")
+    f.write(f"Average PSNR: {avg_psnr}\n")
