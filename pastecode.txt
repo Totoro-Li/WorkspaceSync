@@ -1,41 +1,34 @@
-import os
-import glob
-import re
+To generate visualizations of events for each window, you can modify the `process_events` function in your script to include visualizing and saving each event window before it's fed into the network for reconstruction.
 
-# 指定RESBlur文件夹的路径
-resblur_path = "RESBlur"
+Here is an example of how you could modify your code:
 
-# 列出你不想要的数据集名称
-blacklist = ["dataset1", "dataset2", "dataset3"]  # 用你实际不想要的数据集名替换
+```python
+from matplotlib import pyplot as plt
 
-# 初始化总的SSIM和PSNR值和计数器
-total_ssim = 0
-total_psnr = 0
-count = 0
+def process_events(args):
+    # ... Existing code ...
 
-# 遍历RESBlur文件夹下的所有metrics.txt文件
-for metrics_file in glob.glob(os.path.join(resblur_path, "**", "metrics.txt"), recursive=True):
-    # 检查文件路径是否包含黑名单中的数据集名，如果包含则跳过
-    if any(dataset in metrics_file for dataset in blacklist):
-        continue
+    for event_window in event_window_iterator:
+        # Check if event_window is empty
+        if event_window.size == 0:
+            break
 
-    with open(metrics_file, "r") as f:
-        content = f.read()
+        last_timestamp = event_window[-1, 0]
 
-    # 从文件内容中提取SSIM和PSNR的值
-    ssim = float(re.search(r"SSIM: (\d+\.\d+)", content).group(1))
-    psnr = float(re.search(r"PSNR: (\d+\.\d+)", content).group(1))
+        # Visualize events in the window
+        plt.figure(figsize=(10, 10))
+        plt.scatter(event_window[:, 1], event_window[:, 2], c=event_window[:, 0], marker='.', cmap='viridis')
+        plt.title('Events within the window')
+        plt.xlim(0, width)
+        plt.ylim(height, 0)  # Flip y-axis to match image coordinates
+        plt.colorbar(label='Timestamp')
+        plt.savefig(f'{output_folder}/events_{last_timestamp}.png')  # Save the figure
+        plt.close()
 
-    # 累加SSIM和PSNR的值
-    total_ssim += ssim
-    total_psnr += psnr
-    count += 1
+        with Timer('Building event tensor'):
+            # ... Existing code ...
+```
 
-# 计算平均SSIM和PSNR
-avg_ssim = total_ssim / count
-avg_psnr = total_psnr / count
+In this code, we use Matplotlib to create a scatter plot of the events. Each event is plotted at its (x, y) spatial coordinates, and the color of each point corresponds to the timestamp of the event. The scatter plot is then saved as a PNG image in the output folder. The filename includes the timestamp of the last event in the window for reference. 
 
-# 将平均SSIM和PSNR的值写入RESBlur文件夹下的metrics.txt文件
-with open(os.path.join(resblur_path, "metrics.txt"), "w") as f:
-    f.write(f"Average SSIM: {avg_ssim}\n")
-    f.write(f"Average PSNR: {avg_psnr}\n")
+This will allow you to visualize the distribution of events within each window before they are passed to the model for reconstruction.
