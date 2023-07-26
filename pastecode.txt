@@ -1,1 +1,5 @@
-https://tianchi-jupyter-sh.oss-cn-shanghai.aliyuncs.com/file/opensearch/documents/65347/3D-FRONT.zip?Expires=1690401005&OSSAccessKeyId=LTAI4GGBCQcb7KD7NwKinA3D&Signature=Tx2wCtqUzCSQYiPRqA75YceofPk%3D
+https://tianchi-jupyter-sh.oss-cn-shanghai.aliyuncs.com/file/opensearch/documents/65347/3D-FRONT-texture.zip?Expires=1690401625&OSSAccessKeyId=LTAI4GGBCQcb7KD7NwKinA3D&Signature=PFltdr2oS9YBxtMkm%2FhBfq6UYRQ%3D
+
+https://tianchi-jupyter-sh.oss-cn-shanghai.aliyuncs.com/file/opensearch/documents/98063/3D-FUTURE-model.zip?Expires=1690401747&OSSAccessKeyId=LTAI4GGBCQcb7KD7NwKinA3D&Signature=7ckOZORTIFV40tncSt%2FoIV%2FO6m8%3D
+
+https://tianchi-jupyter-sh.oss-cn-shanghai.aliyuncs.com/file/opensearch/documents/98063/3D-FUTURE-scene.zip?Expires=1690401780&OSSAccessKeyId=LTAI4GGBCQcb7KD7NwKinA3D&Signature=PDziDnzNHjkLH6Dp40kx9JQ0J5k%3D
