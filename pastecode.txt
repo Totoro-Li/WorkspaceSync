@@ -1,5 +1,30 @@
-https://tianchi-jupyter-sh.oss-cn-shanghai.aliyuncs.com/file/opensearch/documents/65347/3D-FRONT-texture.zip?Expires=1690401625&OSSAccessKeyId=LTAI4GGBCQcb7KD7NwKinA3D&Signature=PFltdr2oS9YBxtMkm%2FhBfq6UYRQ%3D
+import requests
+from tqdm import tqdm
+import os
+import re
 
-https://tianchi-jupyter-sh.oss-cn-shanghai.aliyuncs.com/file/opensearch/documents/98063/3D-FUTURE-model.zip?Expires=1690401747&OSSAccessKeyId=LTAI4GGBCQcb7KD7NwKinA3D&Signature=7ckOZORTIFV40tncSt%2FoIV%2FO6m8%3D
+FILE_URL = "https://download.ifi.uzh.ch/rpg/RVT/datasets/preprocessed/gen4.tar"  # Replace with your file URL
+CLOUDFLARE_WORKER_URL = "https://cdn.zhuo.li"
 
-https://tianchi-jupyter-sh.oss-cn-shanghai.aliyuncs.com/file/opensearch/documents/98063/3D-FUTURE-scene.zip?Expires=1690401780&OSSAccessKeyId=LTAI4GGBCQcb7KD7NwKinA3D&Signature=PDziDnzNHjkLH6Dp40kx9JQ0J5k%3D
+response = requests.get(f"{CLOUDFLARE_WORKER_URL}?url={FILE_URL}", stream=True)
+
+if response.status_code == 200:
+    file_size = int(response.headers.get("Content-Length", 0))
+    # Get the filename from the Content-Disposition header or default to a generic name
+    cd = response.headers.get('Content-Disposition')
+    if cd:
+        fname = re.findall("filename[^;=\n]*=((['\"]).*?\2|[^;\n]*)", cd)
+        if len(fname) > 0 and len(fname[0]) > 0:
+            fname = fname[0][0].replace('"', '').replace("'", "")
+        else:
+            fname = os.path.basename(FILE_URL)
+    else:
+        fname = os.path.basename(FILE_URL)
+    
+    progress = tqdm(response.iter_content(chunk_size=1024), f'Downloading {fname}', total=file_size, unit="B", unit_scale=True, unit_divisor=1024)
+    with open(fname, 'wb') as f:
+        for data in progress.iterable:
+            f.write(data)
+            progress.update(len(data))
+else:
+    print(f"Failed to download the file. Status code: {response.status_code}")v
