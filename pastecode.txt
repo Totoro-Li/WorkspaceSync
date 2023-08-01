@@ -5,6 +5,7 @@ import re
 
 FILE_URL = "https://download.ifi.uzh.ch/rpg/RVT/datasets/preprocessed/gen4.tar"  # Replace with your file URL
 CLOUDFLARE_WORKER_URL = "https://cdn.zhuo.li"
+DOWNLOAD_PATH = "/media/HDD1"
 
 response = requests.get(f"{CLOUDFLARE_WORKER_URL}?url={FILE_URL}", stream=True)
 
@@ -20,6 +21,9 @@ if response.status_code == 200:
             fname = os.path.basename(FILE_URL)
     else:
         fname = os.path.basename(FILE_URL)
+
+    # Append the download path to the filename
+    fname = os.path.join(DOWNLOAD_PATH, fname)
     
     progress = tqdm(response.iter_content(chunk_size=1024), f'Downloading {fname}', total=file_size, unit="B", unit_scale=True, unit_divisor=1024)
     with open(fname, 'wb') as f:
@@ -27,4 +31,4 @@ if response.status_code == 200:
             f.write(data)
             progress.update(len(data))
 else:
-    print(f"Failed to download the file. Status code: {response.status_code}")v
+    print(f"Failed to download the file. Status code: {response.status_code}")
