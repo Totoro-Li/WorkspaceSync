@@ -1,122 +1,42 @@
-Here's the modification to address your comments:
+### Introduction
 
-```python
-import random
+1. 在100B到1000B参数规模时。由于LLM的成功应用和效能，以及模型浮点运算(FLOPS)利用率(MFU)的评估问题，需要对模型大小进行更有效的扩展。
+2. 当前的人工智能(AI)加速器在模型训练过程中的利用率可能低至50%或更低，因此有必要显著提高MFU以使模型大小在类似当前系统的架构上提高10倍（10万亿参数）或更高。
 
-SAMPLES_NUM = 10  # Number of images to randomly sample for reconstruction
+### Background
 
-def process_single_image(args, events, timestamp, model, reconstructor, num_frames=3):
-    width, height = args.width, args.height
+软硬件协同设计(Co-design) - 通过协同优化软硬件架构来提升LLM的训练效率。
 
-    # Get event window corresponding to the timestamp of the blurry image
-    start_time = timestamp - num_frames * args.window_duration * 1e-3  # Convert to seconds
-    end_time = timestamp + num_frames * args.window_duration * 1e-3  # Convert to seconds
-    start_index = events[:, 0].searchsorted(start_time, side='left')
-    end_index = events[:, 0].searchsorted(end_time, side='right')
-    event_window = events[start_index:end_index]
+GPU集群(GPU Clusters) - 基于类似NVIDIA DGX/HGX的多GPU节点集群的分布式训练平台。
 
-    with Timer('Processing single image'):
-        # Check if event_window is empty
-        if event_window.size == 0:
-            return
+内存优化(Memory Optimization) - 通过张量卸载等方式优化内存使用,支持更大模型。
 
-        last_timestamp = event_window[-1, 0]
+并行策略(Parallelism) - DP, TP, PP等方式分布训练计算。
 
-        with Timer('Building event tensor'):
-            if args.compute_voxel_grid_on_cpu:
-                event_tensor = events_to_voxel_grid(event_window,
-                                                    num_bins=model.num_bins,
-                                                    width=width,
-                                                    height=height)
-                event_tensor = torch.from_numpy(event_tensor)
-            else:
-                event_tensor = events_to_voxel_grid_pytorch(event_window,
-                                                            num_bins=model.num_bins,
-                                                            width=width,
-                                                            height=height,
-                                                            device=args.device)
+性能建模(Performance Modeling) - 建立快速的分析性能模型来指导软硬件的协同设计。
 
-        num_events_in_window = event_window.shape[0]
-        reconstructor.update_reconstruction(event_tensor, start_index + num_events_in_window, last_timestamp)
+### 总体目标
 
-def process_dataset_single_image(dataset_dir, path_to_model, use_gpu, output_folder):
-    parser = main_inference_options()
-    set_inference_options(parser)
-    default_args = vars(parser.parse_args([]))  # get a dictionary of defaults
-    default_args.update(
-        {
-            "use_gpu": use_gpu,
-            "auto_hdr": True,
-            "fixed_duration": True,
-        }
-    )
-    os.makedirs(output_folder, exist_ok=True)
-    for split in os.listdir(dataset_dir):
-        split_path = os.path.join(dataset_dir, split)
+本文旨在寻找在8个互连GPU的大型系统（类似于NVIDIA DGX和HGX）上训练多万亿参数模型的性能瓶颈和系统限制，同时结合算子分发和并行等确定大模型参数量和尺寸的理想关系。
 
-        # Check if subfolder is named train or test
-        if os.path.isdir(split_path) and split in ["train", "test"]:
-            for file in os.listdir(split_path):
-                folder_path = os.path.join(split_path, file)
-                subdir_output_folder = os.path.join(output_folder, split, file.split(".")[0])
-                os.makedirs(subdir_output_folder, exist_ok=True)
+### 方法:
+a. 理论背景：
 
-                if file.endswith(".h5"):
-                    print(f"Processing {folder_path}")
+使用了一种名为Calculon的开源快速分析性能模型来估计给定LLM，系统配置和软件执行策略的时间和资源使用情况。
 
-                    args = default_args.copy()  # start with defaults
-                    args.update(
-                        {
-                            "path_to_model": path_to_model,
-                            "input_file": folder_path,
-                            "use_gpu": use_gpu,
-                            "output_folder": subdir_output_folder,
-                        }
-                    )
-                    args_namespace = argparse.Namespace(**args)
+b. 技术方法：
 
-                    blurry_images = extract_blurry_images(folder_path)
+为了验证其模型的精度，作者们将Calculon与在NVIDIA的A100-based Selene超级计算机上实际运行的Megatron LLM进行了比较。
 
-                    with h5py.File(folder_path, 'r') as f:
-                        args_namespace.width, args_namespace.height = f.attrs['sensor_resolution'][0:2]
+另外，作者们使用tensor offloading技术来增加可训练LLM的大小。他们的发现表明，当前的H100 GPU，配备80 GiB的HBM和512 GiB的tensor offloading能力，可以扩展到11T参数的LLM；而达到128T参数需要120 GiB的HBM和2 TiB的offloading内存，从而实现75%+ MFU。
 
-                    df = convert_h5_to_df(folder_path)
+### 结果：
+a. 详细的实验设置：
 
-                    # Load model
-                    model = load_model(args_namespace.path_to_model)
-                    device = get_device(args_namespace.use_gpu)
+在实验中，作者们考虑了系统大小，模型大小，内存容量，带宽和NVLink域大小等因素的变化。每个系统，都选择了一个执行策略，该策略考虑了多种最新的软件优化，并选择了性能最佳的一个。
 
-                    model = model.to(device)
-                    model.eval()
+b. 详细的实验结果：
 
-                    args_namespace.device = device
+作者们发现，训练百万亿参数的LLM是可行的，但每个GPU需要高达1 TiB的二级内存池，并且带宽为100 GB/s双向。此外，他们发现，10T模型以上的扩展需要更多的一级内存，其中HBM大小随模型大小而缩放。
 
-                    reconstructor = ImageReconstructor(model, args_namespace.height, args_namespace.width, model.num_bins, args_namespace)
-
-                    # Randomly sample images for reconstruction
-                    blurry_images = random.sample(blurry_images, min(SAMPLES_NUM, len(blurry_images)))
-
-                    for img, timestamp in blurry_images:
-                        process_single_image(args_namespace, df.values, timestamp, model, reconstructor)
-```
-
-Usage:
-
-```python
-if __name__ == "__main__":
-    dataset_dir = "/root/autodl-tmp/datasets/GOPRO_rawevents"
-    path_to_model = '/root/autodl-tmp/rpg_e2vid/pretrained/E2VID_lightweight.pth.tar'
-    use_gpu = True
-    output_folder = "/root/autodl-tmp/datasets/GOPRO_e2vid_pred"
-
-    process_dataset_single_image(dataset_dir, path_to_model, use_gpu, output_folder)
-```
-
-This modification addresses your comments as follows:
-
-1. The model is now loaded just once for each h5 file, before the loop over the blurry images, and passed as a parameter to the `process_single_image` function. The same applies to the `reconstructor` object.
-2. The `width` and `height` attributes are now read from the h5 file and set in the args namespace before calling `process_single_image`.
-3. I added a line to randomly sample a certain number of images for reconstruction. The number of images to sample is specifiedby the `SAMPLES_NUM` constant. You can adjust this value as needed. Note that if there are fewer images than `SAMPLES_NUM`, all images will be used for reconstruction.
-4. I modified the `process_single_image` function to use events from a window covering `num_frames` frames before and after the timestamp of the blurry image. The number of frames can be adjusted by changing the `num_frames` parameter of `process_single_image`. The duration of a frame is given by `args.window_duration`, which should be set to the average duration of a frame in your data.
-
-Please note that these modifications assume that the timestamps of the events and the blurry images are in the same time units (seconds). If they are not, you might need to adjust the code to convert between different time units.
+总的来说，作者们发现，实现高性能和效率将至关重要，需要对LLM，软件和硬件进行联合设计。
