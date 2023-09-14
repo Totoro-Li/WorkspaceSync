@@ -12,7 +12,11 @@ do
     echo "Testing write speed for $drive..."
     result=$(dd if=/dev/zero of=/mnt/$drive/testfile bs=1G count=1 oflag=direct 2>&1)
     rm -f /mnt/$drive/testfile
-    speed=$(echo $result | grep -oP '\d+(\.\d+)? MB/s' | grep -oP '\d+(\.\d+)?')
+    speed=$(echo $result | grep -oP '\d+(\.\d+)? (MB|GB)/s' | grep -oP '\d+(\.\d+)?')
+    unit=$(echo $result | grep -oP '\d+(\.\d+)? \K(MB|GB)/s')
+    if [ "$unit" = "GB/s" ]; then
+      speed=$(echo "$speed*1024" | bc)
+    fi
     write_speeds["$drive"]=$speed
     echo "$drive Write Speed: $speed MB/s"
 done
@@ -24,7 +28,11 @@ do
     echo "Testing read speed for $drive..."
     result=$(dd if=/mnt/$drive/testfile of=/dev/null bs=1G count=1 iflag=direct 2>&1)
     rm -f /mnt/$drive/testfile
-    speed=$(echo $result | grep -oP '\d+(\.\d+)? MB/s' | grep -oP '\d+(\.\d+)?')
+    speed=$(echo $result | grep -oP '\d+(\.\d+)? (MB|GB)/s' | grep -oP '\d+(\.\d+)?')
+    unit=$(echo $result | grep -oP '\d+(\.\d+)? \K(MB|GB)/s')
+    if [ "$unit" = "GB/s" ]; then
+      speed=$(echo "$speed*1024" | bc)
+    fi
     read_speeds["$drive"]=$speed
     echo "$drive Read Speed: $speed MB/s"
 done
