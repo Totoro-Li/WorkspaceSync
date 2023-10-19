@@ -1,1 +1,46 @@
-sudo yum install -y https://www.softwarecollections.org/en/scls/rhscl/devtoolset-7/epel-7-x86_64/download/rhscl-devtoolset-7-epel-7-x86_64.noarch.rpm
+Ah, I see. Conda's `gcc` installations don't overwrite the system's `gcc` name to avoid unexpected behaviors. However, you can create symbolic links for the duration of your work so that the NVIDIA driver installation uses the Conda-installed GCC.
+
+Here's how to do it:
+
+1. **Create a temporary directory for symlinks**:
+
+   ```bash
+   mkdir ~/temp_gcc_links
+   ```
+
+2. **Create symlinks for `gcc` and `g++` in this directory**:
+
+   ```bash
+   ln -s $(which x86_64-conda-linux-gnu-gcc) ~/temp_gcc_links/gcc
+   ln -s $(which x86_64-conda-linux-gnu-g++) ~/temp_gcc_links/g++
+   ```
+
+3. **Prepend this directory to your `PATH`**:
+
+   ```bash
+   export PATH=~/temp_gcc_links:$PATH
+   ```
+
+4. **Verify the GCC version**:
+
+   ```bash
+   gcc --version
+   ```
+
+   This should show GCC 7.5.0.
+
+5. **Run your DKMS installation command**:
+
+   ```bash
+   dkms install -m nvidia -v xxx
+   ```
+
+6. **Cleanup**:
+
+   After your NVIDIA installation completes, you can delete the temporary directory:
+
+   ```bash
+   rm -r ~/temp_gcc_links
+   ```
+
+Remember, the key here is ensuring that the path with your custom GCC version (via symbolic links) appears before the system's default GCC in the `PATH` environment variable. By creating a temporary directory for symlinks and adjusting the `PATH`, you can control which version is picked up without making any permanent changes.
