@@ -1,10 +1,4 @@
-cdn.zhuo.li/download.ifi.uzh.ch/rpg/DSEC/train_coarse/train_events.zip
-cdn.zhuo.li/download.ifi.uzh.ch/rpg/DSEC/train_coarse/train_images.zip
-cdn.zhuo.li/download.ifi.uzh.ch/rpg/DSEC/train_coarse/train_disparity.zip
-cdn.zhuo.li/download.ifi.uzh.ch/rpg/DSEC/train_coarse/train_optical_flow.zip
-cdn.zhuo.li/download.ifi.uzh.ch/rpg/DSEC/semantic/train_semantic_segmentation.zip
-cdn.zhuo.li/download.ifi.uzh.ch/rpg/DSEC/train_coarse/train_calibration.zip
-cdn.zhuo.li/download.ifi.uzh.ch/rpg/DSEC/test_coarse/test_events.zip
-cdn.zhuo.li/download.ifi.uzh.ch/rpg/DSEC/test_coarse/test_images.zip
-cdn.zhuo.li/download.ifi.uzh.ch/rpg/DSEC/semantic/test_semantic_segmentation.zip
-cdn.zhuo.li/download.ifi.uzh.ch/rpg/DSEC/test_coarse/test_calibration.zip
+https://cloud.tsinghua.edu.cn/seafhttp/files/d3758240-1f52-4797-8163-632b6247e470/gen1.zip.001
+https://cloud.tsinghua.edu.cn/seafhttp/files/8e4dc443-48d8-4185-bea5-2e98d7b593a0/gen1.zip.002
+https://cloud.tsinghua.edu.cn/seafhttp/files/1e528161-e45b-4f0c-ace9-77313f8df9b5/gen1.zip.003
+https://cloud.tsinghua.edu.cn/seafhttp/files/f53b5d3d-adb1-4519-8db7-304ab72ec023/gen1.zip.004

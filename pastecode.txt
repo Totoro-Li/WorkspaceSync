@@ -1,7 +1,52 @@
-https://cloud.tsinghua.edu.cn/seafhttp/files/d3758240-1f52-4797-8163-632b6247e470/gen1.zip.001
+To create a Bash script that uses `wget` to download all URLs from a text file and places each download instance in a separate `tmux` pane (since `tmux` does not support tabs, we use panes within the same window), you can use the following script:
 
-https://cloud.tsinghua.edu.cn/seafhttp/files/8e4dc443-48d8-4185-bea5-2e98d7b593a0/gen1.zip.002
+```bash
+#!/bin/bash
 
-https://cloud.tsinghua.edu.cn/seafhttp/files/1e528161-e45b-4f0c-ace9-77313f8df9b5/gen1.zip.003
+# Check if the input file with URLs is provided
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <file_with_urls>"
+    exit 1
+fi
 
-https://cloud.tsinghua.edu.cn/seafhttp/files/f53b5d3d-adb1-4519-8db7-304ab72ec023/gen1.zip.004
+# Read the file with URLs
+URL_FILE="$1"
+
+# Create a new tmux session. The session will be named 'downloads'
+tmux new-session -d -s downloads
+
+# Read each URL from the file and create a pane for each download
+while IFS= read -r URL; do
+    # Create a new pane and run wget in it
+    # '-d' detaches from the session
+    # 'split-window' creates a new pane
+    # '-h' splits horizontally, use '-v' for vertical splits
+    tmux split-window -h "wget -c \"$URL\""
+    # 'select-layout' makes sure the layout is even by re-arranging the panes
+    tmux select-layout tiled
+done < "$URL_FILE"
+
+# After all URLs have been added, 'kill-pane' is used to close the original pane
+# that was automatically created when the new session started
+tmux kill-pane -t downloads:0.0
+
+# Attach to the session
+tmux attach -t downloads
+```
+
+You would save this script to a file, for example, `download_in_tmux.sh`, give it execute permissions using `chmod +x download_in_tmux.sh`, and then run it passing the path to the text file containing the URLs as an argument:
+
+```bash
+./download_in_tmux.sh gen1_zip_urls.txt
+```
+
+This script assumes that:
+- You have `wget` and `tmux` installed on your system.
+- You are not running it as root (as it's usually not recommended to run `wget` as root for security reasons).
+- The URLs in the file are absolute URLs and are each on a new line.
+
+The script works by:
+- Creating a new detached `tmux` session named "downloads".
+- Reading each URL from the provided file and opening a new `tmux` pane for each one to start the `wget` download.
+- After setting up all panes, it removes the original pane that was automatically created when the new session started.
+- Finally, it attaches to the `tmux` session, allowing you to view the progress of all downloads.
