@@ -1,1 +1,7 @@
-https://diskasu.pku.edu.cn:10002/Bucket/bab1d452-c23b-4d03-b766-329261bcc4d6/F4441B6DD5AA427EAF2CAD89A27F883F/22A7FA010C414B6FBAD0422BF27DCBF4?response-content-disposition=attachment%3b%20filename%3d%22C%252b%252b%2520Primer%2520plus%25e7%25ac%25ac6%25e7%2589%2588%25ef%25bc%2588%25e4%25b8%25ad%25e6%2596%2587%25e7%2589%2588%25ef%25bc%2589.pdf%22%3b%20filename*%3dutf%2d8%27%27C%252b%252b%2520Primer%2520plus%25e7%25ac%25ac6%25e7%2589%2588%25ef%25bc%2588%25e4%25b8%25ad%25e6%2596%2587%25e7%2589%2588%25ef%25bc%2589.pdf&AWSAccessKeyId=ASE&Expires=1697710538&Signature=m09RYwT6Bs2skOva%2fVFPJScLiBM%3d&x-as-userid=20d3a69a-ec51-11ea-8a21-ccbbfe31b02d
+https://cloud.tsinghua.edu.cn/seafhttp/files/d3758240-1f52-4797-8163-632b6247e470/gen1.zip.001
+
+https://cloud.tsinghua.edu.cn/seafhttp/files/8e4dc443-48d8-4185-bea5-2e98d7b593a0/gen1.zip.002
+
+https://cloud.tsinghua.edu.cn/seafhttp/files/1e528161-e45b-4f0c-ace9-77313f8df9b5/gen1.zip.003
+
+https://cloud.tsinghua.edu.cn/seafhttp/files/f53b5d3d-adb1-4519-8db7-304ab72ec023/gen1.zip.004
